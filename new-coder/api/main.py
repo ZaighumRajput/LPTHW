@@ -1,7 +1,7 @@
 from __future__ import print_function
 # in python 3, print() is a function, while in python 2, print is a keyword.
 import requests
-
+import logging  
 
 #object?
 class CPIDData(object):
@@ -105,6 +105,70 @@ class CPIDData(object):
         current_cpi = self.year_cpi[current_year]
 
         return float(price) / year_cpi * current_cpi
+
+class GiantbombAPI(object):
+    """
+    Simple implementation of the Giantbomb API that only offers the GET /platforms/ call as a generator
+
+    Note that thsi implementation only exposes of the API that we really need
+    """
+
+    base_url = 'http://www.giantbomb.com/api'
+
+    def __init_(self, api_key):
+        self.api_key = api_key
+
+    def get_platforms(self, sort=None, filter=None, field_list=None):
+        """
+        Generators yielding platforms matching the given criteria. 
+        If no limit is specified, this will return *all* platforms.
+        """
+
+        params = {}
+        if sort is not None:
+            params['sort'] = sort
+        if field_list is not None:
+            params['field_list'] = ','.join(field_list)
+        if filter is not None:
+            params['filter'] = filter
+            parsed_filters = []
+            for key, value in filter.iteritems():
+                parsed_filters.append('{0}:{1}'.format(key, value))
+            params['filter'] = ','.join(parsed_filters)
+
+        params['api_key'] = self.api_key
+        params['format'] = 'json'
+
+        incomplete_result = True
+        num_total_results = None
+        num_fetched_resuls = 0
+        count = 0
+
+        while incomplete_result:
+            #Giantbomb's limit for items in a result set for this API is 100 items
+            #needs some provisions if we ask for more
+
+            params['offset'] = num_fetched_results
+            result = requests.get(self.base_url + '/platforms/', params = params)
+
+            result = result.json()
+
+            if num_total_results is None:
+                num_total_results = int(result['number_of_total_results'])
+            num_fetched_results += int(result['number_of_page_results'])
+            if num_fetched_results >= num_total_results:
+                incomplete_result = False
+            for item in result['results']:
+                logging.debug("Yielding platform {0} of {1}".format( count+ 1 , num_total_results))
+
+            #Since this is supposed to be an abstraction, we also convert 
+            # values here into a more useful format where appropriate
+
+            if 'original_price' in item and item['original_price']:
+                item['original_price'] = float(item['original_price'])
+
+            yield item
+            counter += 1 
 
 
 
