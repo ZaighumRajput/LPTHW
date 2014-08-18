@@ -1,7 +1,9 @@
 from __future__ import print_function
 # in python 3, print() is a function, while in python 2, print is a keyword.
 import requests
-import logging  
+import logging 
+import matplotlib.pyplot as plt
+import numpy as np 
 
 #object?
 class CPIDData(object):
@@ -169,10 +171,65 @@ class GiantbombAPI(object):
 
             yield item
             counter += 1 
+			
+def is_valid_dataset(platform):
+	"""Filters out datasets that we can't use since they are either lacking a release date or an
+	original price. For rendering the output we also require the name and abbreviation of the platform
+	"""
+	if 'release_date' not in platform or not platform['release_date']:
+		logging.warn(u"{0} has no release date".format(platform['name']))
+		return False
+	if 'original_price' not in platform or not platform['original_price']
+		logging.warn(u"{0} has no original price".format(platform['name']))
+		return False
+	if 'name' not in platform or not platform['name']:
+		logging.warn(u"No platform name found for given dataset")
+		return False
+	if 'abbreviation' not in platform or not platform['abbreviation']:
+		logging.warn(u"{0} has no abbreviation".format(platform['name']))
+		return False
+	return True
+	
+def generate_plot(platforms, output_file):
+	"""Generates a bar chart out of the given platforms and writes the output
+	into the specified file as PNG image.
+	"""
+	
+	#First off we need to convert the platforms in a format that can be 
+	#attached to the 2 axis of our bar chart. "labels" will become the 
+	#x-axis and "values" the value of each label on the y-axis:
+	labels = []
+	values = []
+	for platform in platforms:
+		name = platform['name']
+		adapted_price = platform['adjusted_price']
+		price = platform['original_price']
+		
+		if price > 2000:
+			continue
+			
+		#If the name of the platform is too long, replace it with the 
+		#abbreviation. list.insert(0,val) inserts val at the beginning of the list
+		
+		if len(name) > 15:
+			name = platform['abbreviation']
+		labels.insert(0, u"{0}\n$ {1}\n$ {2}".format(name, price, round(adjusted_price,2)))
+		
+		values.insert(0, adapted_price)
 
-
-
-
+	# Let's define the width of each bar and the size of the resulting graph
+	width = 0.3
+	ind = np.arange(len(values))
+	fig = plt.figure(figsize=(len(labels)*1.8, 10))
+	
+	plt.ylabel('Adjusted price')
+	plt.xlabel('Year / Console')
+	ax.set_xticks(ind + 0.3)
+	ax.set_xticklabels(labels)
+	fig.autofmt_xdate()
+	plt.grid(True)
+	
+	plt.savefig(output_file, dpi=72) # or plt.show(...)
 
 
 
