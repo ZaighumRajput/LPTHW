@@ -4,7 +4,35 @@ import requests
 import logging 
 import matplotlib.pyplot as plt
 import numpy as np 
+import argparse
 
+def parse_args():
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--giantbomb-api-key', required=True,
+						help='API key provided by Giantbomb.com')
+	parser.add_argument('--cpi-file',
+						default=os.path.join(os.path.dirname(__file__),
+											'CPIAUCSL.txt'),
+						help = 'Path to file containing the CPI data (also acts'
+						' as target file if the data has to be downloaded'
+						'first).')
+	parser.add_argument('--cpi-data-url', default=CPI_DATA_URL,
+						help='URL which should be used as CPI data source')
+	parser.add_argument('--debug--', default=False, action='store_true',
+						help='Increases the output level.')
+	parser.add_argument('--csv-file',
+						help='Path to CSV file which should contain the data'
+							 'output')
+	parser.add_argument('--plot-file',
+						help='Path to the PNG file which should contain the'
+							'data output')
+	parser.add_argument('--limit', type=int,
+						help='Number of recent platforms to be considered')
+	opts = parser.parse_args()
+	if not (opts.plot_file or opts.csv_file):
+		parser.error("You have to specify either a --csv-file or --plot-file!")
+	return opts
+						
 #object?
 class CPIDData(object):
     """Abstraction of the CPI data provided by FRED
@@ -231,6 +259,27 @@ def generate_plot(platforms, output_file):
 	
 	plt.savefig(output_file, dpi=72) # or plt.show(...)
 
+def generate_csv(platforms, output_file):
+	"""Writes the given platforms into a CSV file specified by the output parameter.
+
+	The output_file can either be the path to a file or a file-life object
+	"""
+	dataset = tablib.Dataset(headers=['Abbreviation', 'Name', 'Year', 'Price', 'Adjusted Price'])
+	
+	for p in platforms:
+		dataset.append([p['abbreviation'], p['name'], p['year'],
+					    p['original_price'], p['adjusted_price']])
+	
+	# If the output_file is a string it represetns a path to a file which
+	# we will have to open first for writing. Otherwise we just assume that
+	# it is already a file-lie object and write the data into it.
+	
+	if isinstance(output_file, basestring):
+		with open(output_file, 'w+') as fp:
+			fp.write(dataset.csv)
+	else:
+		output_file.write(dataset.csv)
+	
 
 
 
